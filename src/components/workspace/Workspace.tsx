@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -928,6 +928,20 @@ export default function Workspace() {
       positions,
     };
   }, [job.multiUp, job.pageSizeMM, pageSizesMM, designPageForPreview]);
+
+  // Width/height ratio of the uploaded design; with "Keep design ratio" on, the multi-up cell
+  // height follows the width so the design is never stretched (also fixes older projects).
+  const designRatio = useMemo(() => {
+    const p = pageSizesMM[designPageForPreview - 1];
+    return p && p.width > 0 && p.height > 0 ? p.width / p.height : null;
+  }, [pageSizesMM, designPageForPreview]);
+  useEffect(() => {
+    const mu = job.multiUp;
+    if (!mu?.enabled || !designRatio || !(mu.keepRatio ?? true)) return;
+    const w = mu.designWidthMM || 50;
+    const h = Math.round((w / designRatio) * 10) / 10;
+    if (Math.abs((mu.designHeightMM || 30) - h) > 0.05) setJob({ multiUp: { ...mu, designWidthMM: w, designHeightMM: h } });
+  }, [designRatio, job.multiUp, setJob]);
   
   // Format barcode text with separators
   const formatWithSeparator = (code: string) => {
@@ -1437,6 +1451,65 @@ export default function Workspace() {
   // Dragging logic inside preview area
   const previewRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  // Mouse navigation in the preview: middle button drags the page around, Ctrl + wheel zooms
+  // around the mouse pointer. Native listeners so the wheel can stop the browser's page zoom.
+  const zoomAnchor = useRef<{ cx: number; cy: number; mx: number; my: number; ratio: number } | null>(null);
+  const navAttached = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || navAttached.current === el) return;
+    navAttached.current = el;
+    let pan: { x: number; y: number; left: number; top: number; id: number } | null = null;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const z = useWorkspaceStore.getState().zoom;
+      const step = Math.min(Math.abs(e.deltaY), 100) / 100; // trackpads send small steps
+      const next = clamp(z * (e.deltaY < 0 ? 1 + 0.15 * step : 1 / (1 + 0.15 * step)), 0.25, 4);
+      if (next === z) return;
+      const r = el.getBoundingClientRect();
+      const mx = e.clientX - r.left;
+      const my = e.clientY - r.top;
+      zoomAnchor.current = { cx: el.scrollLeft + mx, cy: el.scrollTop + my, mx, my, ratio: next / z };
+      useWorkspaceStore.getState().setZoom(next);
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 1) return;
+      e.preventDefault(); // no auto-scroll cursor
+      pan = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop, id: e.pointerId };
+      el.setPointerCapture(e.pointerId);
+      el.style.cursor = "grabbing";
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!pan) return;
+      el.scrollLeft = pan.left - (e.clientX - pan.x);
+      el.scrollTop = pan.top - (e.clientY - pan.y);
+    };
+    const onUp = () => {
+      if (!pan) return;
+      try { el.releasePointerCapture(pan.id); } catch { /* already released */ }
+      pan = null;
+      el.style.cursor = "";
+    };
+    const noAux = (e: MouseEvent) => { if (e.button === 1) e.preventDefault(); };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onUp);
+    el.addEventListener("mousedown", noAux);
+    el.addEventListener("auxclick", noAux);
+  });
+  // After a Ctrl+wheel zoom, keep the spot under the mouse in place.
+  useLayoutEffect(() => {
+    const a = zoomAnchor.current;
+    const el = scrollRef.current;
+    if (!a || !el) return;
+    zoomAnchor.current = null;
+    el.scrollLeft = a.cx * a.ratio - a.mx;
+    el.scrollTop = a.cy * a.ratio - a.my;
+  }, [zoom]);
+
   const handleFit = () => {
     const cont = scrollRef.current;
     if (!cont) return;
@@ -1699,6 +1772,7 @@ export default function Workspace() {
 
           {/* Page Setup Section */}
           <PageSetupSection
+            designRatio={designRatio}
             pageSetupOpen={pageSetupOpen}
             setPageSetupOpen={setPageSetupOpen}
             job={job}

@@ -97,9 +97,10 @@ function CanvasPreviewInner({
   effectivePlacement,
 }: CanvasPreviewProps) {
   return (
-            <div ref={scrollRef} className="flex-1 overflow-auto p-4 flex items-start justify-center">
-            {/* Rulers */}
-            <div className="relative flex-shrink-0" style={{ backgroundColor: job.marginColor || "#f5f5f5" }} onPointerMove={onMouseMove} onPointerUp={onMouseUp} onPointerLeave={onMouseUp}>
+            <div ref={scrollRef} className="flex-1 overflow-auto pl-14 pt-12 pr-4 pb-4 flex" title="Middle mouse: move around · Ctrl + scroll: zoom">
+            {/* Rulers. m-auto (not justify-center) centres small pages but never cuts off the
+                left/top of a page that is wider than the view. */}
+            <div className="relative flex-shrink-0 m-auto" style={{ backgroundColor: job.marginColor || "#f5f5f5" }} onPointerMove={onMouseMove} onPointerUp={onMouseUp} onPointerLeave={onMouseUp}>
               <div className="relative inline-block">
                 {/* Top ruler */}
                 <div className="absolute -top-8 left-0 right-0 h-8 bg-secondary flex">

@@ -20,14 +20,20 @@ export interface PageSetupSectionProps {
   setPageSetupOpen: (open: boolean) => void;
   job: JobSettings;
   setJob: (job: Partial<JobSettings>) => void;
+  /** width / height of the uploaded design page, if a design is loaded */
+  designRatio?: number | null;
 }
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 function PageSetupSectionInner({
   pageSetupOpen,
   setPageSetupOpen,
   job,
   setJob,
+  designRatio,
 }: PageSetupSectionProps) {
+  const keepRatio = (job.multiUp?.keepRatio ?? true) && !!designRatio;
   return (
           <Collapsible open={pageSetupOpen} onOpenChange={setPageSetupOpen}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-sidebar-accent transition-colors">
@@ -332,15 +338,28 @@ function PageSetupSectionInner({
                       type="number"
                       className="h-7 text-xs"
                       value={job.multiUp?.designWidthMM || 50}
-                      onChange={(e) => setJob({ multiUp: { ...job.multiUp!, designWidthMM: Number(e.target.value) } })}
+                      onChange={(e) => {
+                        const w = Number(e.target.value);
+                        setJob({ multiUp: { ...job.multiUp!, designWidthMM: w, ...(keepRatio && w > 0 ? { designHeightMM: round1(w / designRatio!) } : {}) } });
+                      }}
                     />
                     <Label className="text-xs">Height</Label>
                     <Input
                       type="number"
                       className="h-7 text-xs"
                       value={job.multiUp?.designHeightMM || 30}
-                      onChange={(e) => setJob({ multiUp: { ...job.multiUp!, designHeightMM: Number(e.target.value) } })}
+                      onChange={(e) => {
+                        const h = Number(e.target.value);
+                        setJob({ multiUp: { ...job.multiUp!, designHeightMM: h, ...(keepRatio && h > 0 ? { designWidthMM: round1(h * designRatio!) } : {}) } });
+                      }}
                     />
+                    <div className="col-span-4 flex items-center justify-between pt-1">
+                      <Label className="text-xs" title="Keep the uploaded design's shape so it is never stretched">Keep design ratio</Label>
+                      <Switch
+                        checked={job.multiUp?.keepRatio ?? true}
+                        onCheckedChange={(v) => setJob({ multiUp: { ...job.multiUp!, keepRatio: v } })}
+                      />
+                    </div>
                   </div>
 
                   {/* Margins */}

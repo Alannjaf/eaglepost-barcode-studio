@@ -62,6 +62,7 @@ export interface MultiUpSettings {
   gapColor: string; // color for gaps between designs
   designAlignH: DesignAlignH; // horizontal alignment of design within cell
   designAlignV: DesignAlignV; // vertical alignment of design within cell
+  keepRatio?: boolean; // keep the uploaded design's width/height ratio (default on)
 }
 
 // Invoice page number settings

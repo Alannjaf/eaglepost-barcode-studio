@@ -204,7 +204,18 @@ function BarcodeSettingsSectionInner({
               </Select>
 
               <Label className="text-xs">Font size (pt)</Label>
-              <Input type="number" className="h-8 text-xs" value={barcode.fontSize} onChange={(e) => setBarcode({ fontSize: Number(e.target.value) })} />
+              <Input
+                type="number"
+                className="h-8 text-xs"
+                value={barcode.fontSize}
+                title="Changes the text size of every barcode on this page"
+                onChange={(e) => {
+                  const size = Number(e.target.value);
+                  setBarcode({ fontSize: size });
+                  // Each placed barcode keeps its own size, so apply the new size to them too.
+                  if (size > 0) currentPlacements.forEach((_, i) => setPlacement(currentPage, i, { fontSize: size }));
+                }}
+              />
 
               <Label className="text-xs">Text spacing (mm)</Label>
               <Input type="number" className="h-8 text-xs" value={barcode.textSpacingMM} onChange={(e) => setBarcode({ textSpacingMM: Number(e.target.value) })} />
@@ -318,6 +329,19 @@ function BarcodeSettingsSectionInner({
                       onChange={(e) => setPlacement(currentPage, selectedPlacementIndex, { heightMM: Number(e.target.value) })}
                     />
 
+
+                    <Label className="text-xs">Font size (pt)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={0.5}
+                      className="h-7 text-xs"
+                      value={currentPlacement.fontSize || barcode.fontSize}
+                      onChange={(e) => {
+                        const size = Number(e.target.value);
+                        if (size > 0) setPlacement(currentPage, selectedPlacementIndex, { fontSize: size });
+                      }}
+                    />
 
                     <Label className="text-xs">Show text</Label>
                     <div className="flex justify-end">

@@ -95,12 +95,50 @@ interface OndiBarcodeRow {
   status?: string;
 }
 
+// --- Paging ---
+// Ondi returns at most 100 rows per request, whatever `limit` we ask for, plus
+// { pagination: { page, limit, total, total_pages } }. Always read every page.
+const ONDI_PAGE_SIZE = 100;
+const MAX_PAGES = 1000; // safety cap (100k rows)
+const PAGE_WINDOW = 4; // pages fetched at the same time after the first
+
+async function fetchAllPages<T>(
+  path: string,
+  params: Record<string, string | number | undefined> = {}
+): Promise<T[]> {
+  const fetchPage = async (page: number) => {
+    const json = await ondiGet(path, { ...params, page, limit: ONDI_PAGE_SIZE });
+    const p = (json as { pagination?: { total_pages?: number; limit?: number } })?.pagination;
+    return { rows: ondiRows<T>(json), totalPages: p?.total_pages, pageSize: p?.limit };
+  };
+  const first = await fetchPage(1);
+  const all: T[] = [...first.rows];
+  const pageSize = first.pageSize || first.rows.length || ONDI_PAGE_SIZE;
+  const lastPage = Math.min(first.totalPages ?? MAX_PAGES, MAX_PAGES);
+  if (first.rows.length === 0 || (first.totalPages === undefined && first.rows.length < pageSize)) return all;
+
+  let next = 2;
+  while (next <= lastPage) {
+    const pages: number[] = [];
+    while (pages.length < PAGE_WINDOW && next <= lastPage) pages.push(next++);
+    const results = await Promise.all(pages.map(fetchPage));
+    let done = false;
+    for (const r of results) {
+      if (done) break;
+      all.push(...r.rows); // keep page order
+      if (r.rows.length < pageSize) done = true; // short page = end of data
+    }
+    if (done) break;
+  }
+  return all;
+}
+
 // --- Institutions (verified shape: { id, user_id, users: { full_name, email } }) ---
 // Cached ~5 min; pass { force: true } to bypass (e.g. an explicit refresh).
 export async function listInstitutions(opts?: { force?: boolean }): Promise<OndiInstitution[]> {
   return cached("institutions", TTL_INSTITUTIONS, !!opts?.force, async () => {
-    const json = await ondiGet("/delivery/institutions", { page: 1, limit: 100 });
-    return ondiRows<OndiInstitutionRow>(json).map((i) => ({
+    const rows = await fetchAllPages<OndiInstitutionRow>("/delivery/institutions");
+    return rows.map((i) => ({
       id: i.id,
       userId: i.user_id,
       name: i.users?.full_name ?? i.business_details?.name ?? i.id,
@@ -116,11 +154,8 @@ export async function listBranches(
   opts?: { force?: boolean }
 ): Promise<OndiBranch[]> {
   return cached(`branches:${institutionUserId}`, TTL_BRANCHES, !!opts?.force, async () => {
-    const json = await ondiGet(`/delivery/institutions/${institutionUserId}/branches`, {
-      page: 1,
-      limit: 200,
-    });
-    return ondiRows<OndiBranchRow>(json).map((b) => ({
+    const rows = await fetchAllPages<OndiBranchRow>(`/delivery/institutions/${institutionUserId}/branches`);
+    return rows.map((b) => ({
       id: b.id,
       name: b.name,
       code: b.code,
@@ -138,12 +173,10 @@ export async function listBatches(
   opts?: { force?: boolean }
 ): Promise<OndiBatch[]> {
   return cached(`batches:${institutionUserId}:${branchId}`, TTL_BATCHES, !!opts?.force, async () => {
-    const json = await ondiGet(`/delivery/institutions/${institutionUserId}/barcode-batches`, {
+    const rows = await fetchAllPages<OndiBatchRow>(`/delivery/institutions/${institutionUserId}/barcode-batches`, {
       branch_id: branchId,
-      page: 1,
-      limit: 100,
     });
-    return ondiRows<OndiBatchRow>(json).map((b) => ({
+    return rows.map((b) => ({
       id: b.id,
       prefix: b.prefix ?? b.id,
       quantity: b.quantity ?? 0,
@@ -157,52 +190,9 @@ export async function listBatches(
   });
 }
 
-const BARCODE_PAGE_LIMIT = 500;
-const BARCODE_PAGE_CAP = 50; // safety cap (25k codes)
-const PAGE_WINDOW = 4; // pages fetched concurrently after the first
-
-/**
- * Paginate a batch's `/barcodes` endpoint, parallelizing after the first page.
- * Page 1 runs alone (cheap probe). If it was full (== limit), subsequent pages are
- * fetched in concurrent WINDOWS of PAGE_WINDOW and we stop as soon as any page in a
- * window comes back < limit (no more data). NOT cached — print pulls must be fresh.
- * Rows are appended strictly by page index so ordering stays stable.
- */
-async function paginateBarcodes(
-  batchId: string,
-  status?: string
-): Promise<(string | OndiBarcodeRow)[]> {
-  const fetchPage = async (page: number): Promise<(string | OndiBarcodeRow)[]> => {
-    const json = await ondiGet(`/delivery/barcode-batches/${batchId}/barcodes`, {
-      page,
-      limit: BARCODE_PAGE_LIMIT,
-      status,
-    });
-    return ondiRows<string | OndiBarcodeRow>(json);
-  };
-
-  const all: (string | OndiBarcodeRow)[] = [];
-  const first = await fetchPage(1);
-  all.push(...first);
-  if (first.length < BARCODE_PAGE_LIMIT) return all; // single page covered the whole batch
-
-  let nextPage = 2;
-  for (;;) {
-    // build a window of consecutive pages, respecting the safety cap
-    const pages: number[] = [];
-    while (pages.length < PAGE_WINDOW && nextPage <= BARCODE_PAGE_CAP) pages.push(nextPage++);
-    if (pages.length === 0) break;
-
-    const results = await Promise.all(pages.map((p) => fetchPage(p)));
-    let done = false;
-    for (const rows of results) {
-      // append in page order; rows is already in this window's order
-      all.push(...rows);
-      if (rows.length < BARCODE_PAGE_LIMIT) done = true; // a short page = end of data
-    }
-    if (done) break;
-  }
-  return all;
+/** Every barcode row of a batch (all pages). NOT cached — print pulls must be fresh. */
+function paginateBarcodes(batchId: string, status?: string): Promise<(string | OndiBarcodeRow)[]> {
+  return fetchAllPages<string | OndiBarcodeRow>(`/delivery/barcode-batches/${batchId}/barcodes`, { status });
 }
 
 /** Pull every barcode of a batch WITH its Ondi status (available | used | printed | …).

@@ -33,9 +33,10 @@ jobs:
 
       - name: Create the release (the installer is uploaded into it next)
         shell: bash
-        run: gh release create "v1.0.${{ github.run_number }}" --title "1.0.${{ github.run_number }}" --notes "${{ github.event.head_commit.message }}" --target "${{ github.sha }}"
+        run: gh release create "v1.0.${{ github.run_number }}" --title "1.0.${{ github.run_number }}" --notes "$NOTES" --target "${{ github.sha }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTES: ${{ github.event.head_commit.message }}
 
       - name: Build and publish installer
         run: npm run dist:win -- --publish always

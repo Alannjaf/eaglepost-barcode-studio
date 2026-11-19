@@ -11,7 +11,9 @@ A Windows desktop app for EaglePost staff to turn the branch barcode batches cre
 
 ## Install
 
-Download the latest `EaglePost-Barcode-Studio-Setup-x.y.z.exe` from [Releases](../../releases/latest) and run it.
+**Web app (works on locked-down company PCs, no setup file):** open https://alannjaf.github.io/eaglepost-barcode-studio/ in Edge or Chrome, sign in, then click the **Install app** icon in the address bar (Edge: ⋯ → Apps → Install this site as an app). It gets its own window and Start-menu icon, works offline for designing, and updates itself on the next launch. Data stays in that browser on that PC; use Export backup to move it.
+
+**Windows program:** download the latest `EaglePost-Barcode-Studio-Setup-x.y.z.exe` from [Releases](../../releases/latest) and run it.
 The installer is not code-signed, so Windows may show "Windows protected your PC": click **More info → Run anyway**.
 
 Downloaded PDFs and backups are saved to `Downloads\EaglePost Barcode Studio`.

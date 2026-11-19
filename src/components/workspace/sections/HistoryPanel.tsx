@@ -66,7 +66,7 @@ function HistoryPanelInner({
                 <div className="max-h-[30vh] overflow-auto pr-1">
                   <div className="grid grid-cols-2 gap-2">
                     {Array.from({ length: applyCount }).map((_, i) => {
-                      const dup = thumbnails[currentPage - 1] ?? thumbnails[0] ?? "/placeholder.svg";
+                      const dup = thumbnails[currentPage - 1] ?? thumbnails[0] ?? "./placeholder.svg";
                       return (
                         <div key={`exp-${i}`} className="border rounded overflow-hidden opacity-90">
                           <img src={dup} alt={`Export page ${i + 1}`} className="w-full h-32 object-contain bg-background block" loading="lazy" />

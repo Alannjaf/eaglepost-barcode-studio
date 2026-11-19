@@ -5,6 +5,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Relative paths: the same build runs in the desktop app (app://) and on GitHub Pages (/eaglepost-barcode-studio/).
+  base: "./",
   server: {
     host: "::",
     port: 8080,

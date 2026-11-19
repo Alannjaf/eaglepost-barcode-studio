@@ -1,0 +1,44 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local Netlify folder
+.netlify
+
+# Env (Supabase config / publishable key — keep out of the repo)
+.env
+.env.*
+!.env.example
+
+# Smoke-test outputs (regenerable artifacts)
+smoke/dev.log
+smoke/shots/*.zip
+smoke/shots/*.pdf
+
+# Python bytecode (smoke tests)
+__pycache__/
+*.pyc
+
+# desktop build output
+release/

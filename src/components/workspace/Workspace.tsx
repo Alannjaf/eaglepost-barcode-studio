@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { safeFileName } from "@/utils/printJob";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1187,7 +1188,7 @@ export default function Workspace() {
       });
 
       const blob = new Blob([out.buffer as ArrayBuffer], { type: "application/pdf" });
-      const exportName = `${selectedProjectName || pdfName?.replace(/\.pdf$/i, "") || "export"}.pdf`;
+      const exportName = `${safeFileName(selectedProjectName || pdfName?.replace(/\.pdf$/i, "") || "export")}.pdf`;
 
       // 2) Download immediately (even if saving fails)
       const url = URL.createObjectURL(blob);

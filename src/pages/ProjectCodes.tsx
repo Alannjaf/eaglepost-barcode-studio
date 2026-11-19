@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { safeFileName } from "@/utils/printJob";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -152,7 +153,7 @@ export default function ProjectCodes() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(project?.name || "codes").replace(/[^a-zA-Z0-9._-]+/g, "_")}_codes.csv`;
+    a.download = `${safeFileName(project?.name || "codes")} codes.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();

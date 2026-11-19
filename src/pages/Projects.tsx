@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { safeFileName } from "@/utils/printJob";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectStore } from "@/store/useProjectStore";
@@ -529,7 +530,7 @@ export default function Projects() {
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const objectUrl = URL.createObjectURL(blob);
 
-      const safeName = (fullProject.name || "export").replace(/[^a-zA-Z0-9._-]+/g, "_");
+      const safeName = safeFileName(fullProject.name || "export");
       const filename = `${safeName}.pdf`;
 
       const link = document.createElement("a");

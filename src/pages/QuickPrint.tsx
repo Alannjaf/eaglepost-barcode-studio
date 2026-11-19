@@ -32,6 +32,7 @@ import {
   createPrintedProjects,
   downloadPdf,
   openAndPrint,
+  branchCodeName,
 } from "@/utils/printJob";
 
 interface TemplateRow {
@@ -127,9 +128,11 @@ export default function QuickPrint() {
 
       // Print + keep a copy.
       openAndPrint(pdf);
-      const fileBase = origin
-        ? [origin.institutionName, origin.branchName].filter(Boolean).join("_").replace(/[^a-zA-Z0-9._-]+/g, "_")
-        : picked[0]?.name || "print";
+      const fileBase = branchCodeName(
+        origin?.branchName || origin?.institutionName,
+        picked.map((b) => b.name),
+        picked.reduce((n, b) => n + b.values.length, 0)
+      );
       downloadPdf(pdf, `${fileBase}.pdf`);
 
       // Save tracked project(s) marked printed (the PDF is already delivered).

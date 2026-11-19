@@ -130,12 +130,7 @@ export async function createPrintedProjects(
   let created = 0;
   for (const b of batches) {
     if (!b.values.length) continue;
-    const origin = [b.institutionName, b.branchName].filter(Boolean).join(" - ");
-    const name = origin
-      ? batches.length > 1
-        ? `${origin} — ${b.name}`
-        : origin
-      : b.name;
+    const name = branchCodeName(b.branchName || b.institutionName, [b.name], b.values.length);
 
     const settings = {
       ...otherSettings,
@@ -183,6 +178,22 @@ export async function createPrintedProjects(
 }
 
 /** Trigger a browser download of PDF bytes. */
+/** Make a name safe for a file while keeping Kurdish/Arabic letters (only strips characters
+ *  Windows forbids in file names). */
+export function safeFileName(name: string, fallback = "barcodes"): string {
+  const clean = name.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "");
+  return clean.slice(0, 150) || fallback;
+}
+
+/** "Branch name - GE00059 - 1000 pcs" (several batches: "Branch - GE00059 + GE00060 - 2000 pcs",
+ *  or "+ N more"). */
+export function branchCodeName(branchName: string | undefined, codes: string[], quantity?: number): string {
+  const list = codes.filter(Boolean);
+  const codePart = list.length > 3 ? `${list[0]} + ${list.length - 1} more` : list.join(" + ");
+  const qtyPart = quantity ? `${quantity} pcs` : "";
+  return safeFileName([branchName, codePart, qtyPart].filter(Boolean).join(" - "));
+}
+
 export function downloadPdf(bytes: Uint8Array, filename: string): void {
   const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);

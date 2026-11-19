@@ -211,7 +211,7 @@ export default function OndiBatchPicker({ isOpen, onClose, multi = false, onPick
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden [&>*]:min-w-0">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Barcode className="h-5 w-5" />
@@ -227,7 +227,7 @@ export default function OndiBatchPicker({ isOpen, onClose, multi = false, onPick
         {!connected ? (
           <OndiConnectForm onConnected={loadInstitutions} />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             {/* connected as + disconnect */}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Connected as {session?.email}</span>
@@ -248,7 +248,7 @@ export default function OndiBatchPicker({ isOpen, onClose, multi = false, onPick
                 <Building2 className="h-4 w-4" /> Institution
               </Label>
               <Select value={instUserId} onValueChange={onSelectInstitution} disabled={loadingInst}>
-                <SelectTrigger>
+                <SelectTrigger className="min-w-0 [&>span]:truncate [&>span]:text-start">
                   <SelectValue placeholder={loadingInst ? "Loading…" : "Select institution"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -271,7 +271,7 @@ export default function OndiBatchPicker({ isOpen, onClose, multi = false, onPick
                 onValueChange={onSelectBranch}
                 disabled={!instUserId || loadingBranches}
               >
-                <SelectTrigger>
+                <SelectTrigger className="min-w-0 [&>span]:truncate [&>span]:text-start">
                   <SelectValue
                     placeholder={
                       loadingBranches ? "Loading…" : !instUserId ? "Select institution first" : "Select branch"
@@ -355,8 +355,12 @@ export default function OndiBatchPicker({ isOpen, onClose, multi = false, onPick
                             <p className="text-xs text-muted-foreground truncate">
                               {b.quantity} codes
                               {ageOrRange ? ` · ${ageOrRange}` : ""}
-                              {pulledInfo ? ` · in ${pulledInfo.projectName}` : ""}
                             </p>
+                            {pulledInfo && (
+                              <p className="text-xs text-muted-foreground truncate" title={pulledInfo.projectName}>
+                                Pulled into: <bdi>{pulledInfo.projectName}</bdi>
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
